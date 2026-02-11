@@ -1136,14 +1136,26 @@
 
         // ===== ACTIVITY SCHEDULING SYSTEM (Firestore) =====
         function listenToActivities() {
-            db.collection('activities').orderBy('date').orderBy('time').onSnapshot((snapshot) => {
+            // Simple query to avoid index requirements; sorting is handled in JS
+            db.collection('activities').onSnapshot((snapshot) => {
                 const activities = [];
                 snapshot.forEach((doc) => {
-                    activities.push({ id: doc.id, ...doc.data() });
+                    const data = doc.data();
+                    // Basic validation to ensure we have date/time
+                    if (data.date && data.time) {
+                        activities.push({ id: doc.id, ...data });
+                    }
                 });
                 renderActivities(activities);
             }, (error) => {
                 console.error("Error listening to activities:", error);
+                const container = document.getElementById('activitiesList');
+                if (container) {
+                    container.innerHTML = `<p style="text-align: center; color: #d32f2f; padding: 20px;">
+                        ⚠️ Error al cargar actividades: ${error.message}<br>
+                        <small>Es posible que falte un índice en Firestore.</small>
+                    </p>`;
+                }
             });
         }
 
@@ -1197,26 +1209,31 @@
             }
         }
 
-        function editActivity(id, dataStr) {
-            const data = JSON.parse(decodeURIComponent(dataStr));
+        function editActivity(id, b64Data) {
+            try {
+                const data = JSON.parse(atob(b64Data));
 
-            // Populate form
-            document.getElementById('editActivityId').value = id;
-            document.getElementById('actTitle').value = data.title;
-            document.getElementById('actDate').value = data.date;
-            document.getElementById('actTime').value = data.time;
-            document.getElementById('actResponsible').value = data.responsible;
-            document.getElementById('actType').value = data.type;
-            document.getElementById('actPriority').value = data.priority;
-            document.getElementById('actDescription').value = data.description || '';
-            document.getElementById('actUpdates').value = data.updates || '';
+                // Populate form
+                document.getElementById('editActivityId').value = id;
+                document.getElementById('actTitle').value = data.title || '';
+                document.getElementById('actDate').value = data.date || '';
+                document.getElementById('actTime').value = data.time || '';
+                document.getElementById('actResponsible').value = data.responsible || '';
+                document.getElementById('actType').value = data.type || '';
+                document.getElementById('actPriority').value = data.priority || 'media';
+                document.getElementById('actDescription').value = data.description || '';
+                document.getElementById('actUpdates').value = data.updates || '';
 
-            // Update UI
-            document.getElementById('btnSubmitActivity').innerHTML = '💾 Actualizar Actividad';
-            document.getElementById('btnCancelEdit').style.display = 'block';
+                // Update UI
+                document.getElementById('btnSubmitActivity').innerHTML = '💾 Actualizar Actividad';
+                document.getElementById('btnCancelEdit').style.display = 'block';
 
-            // Scroll to form
-            document.querySelector('.activity-section').scrollIntoView({ behavior: 'smooth' });
+                // Scroll to form
+                document.querySelector('.activity-section').scrollIntoView({ behavior: 'smooth' });
+            } catch (e) {
+                console.error("Error parsing activity data:", e);
+                alert("Error al cargar los datos para editar.");
+            }
         }
 
         function cancelEdit() {
@@ -1271,8 +1288,12 @@
             const container = document.getElementById('activitiesList');
             if (!container) return;
 
-            // Sort by date and time
-            const upcoming = activities.filter(a => !a.completed).sort((a, b) => new Date(a.date + ' ' + a.time) - new Date(b.date + ' ' + b.time));
+            // Sort by date and time in JS
+            const upcoming = activities.filter(a => !a.completed).sort((a, b) => {
+                const dateA = new Date(a.date + ' ' + (a.time || '00:00'));
+                const dateB = new Date(b.date + ' ' + (b.time || '00:00'));
+                return dateA - dateB;
+            });
 
             if (upcoming.length === 0) {
                 container.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">No hay actividades programadas en la nube</p>';
@@ -1286,17 +1307,16 @@
                     'baja': '#4caf50'
                 };
 
-                // Check if current user can edit/delete this activity
                 const canEdit = currentUser.role === 'admin' || act.createdBy === currentUser.name;
                 const buttonOpacity = canEdit ? '1' : '0.3';
                 const buttonCursor = canEdit ? 'pointer' : 'not-allowed';
                 const buttonTitle = canEdit ? '' : 'Solo puedes editar tus propias actividades';
 
-                // Prepare data for edit function
-                const safeData = encodeURIComponent(JSON.stringify(act));
+                // Use Base64 to safely pass JSON string in HTML attribute
+                const safeData = btoa(JSON.stringify(act));
 
                 return `
-                    <div style="background: white; border-left: 4px solid ${priorityColors[act.priority]}; padding: 15px; margin-bottom: 10px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                    <div style="background: white; border-left: 4px solid ${priorityColors[act.priority] || '#ccc'}; padding: 15px; margin-bottom: 10px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
                         <div style="display: flex; justify-content: space-between; align-items: start;">
                             <div style="flex: 1;">
                                 <h4 style="color: #0072bc; margin-bottom: 5px;">${act.title}</h4>
