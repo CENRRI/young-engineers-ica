@@ -876,21 +876,28 @@
         // Load progress from localStorage
         function loadProgress() {
             const saved = localStorage.getItem('youngEngineersProgress');
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+
             if (saved) {
                 const progress = JSON.parse(saved);
-                const checkboxes = document.querySelectorAll('input[type="checkbox"]');
                 checkboxes.forEach((cb, index) => {
-                    if (progress[index]) {
-                        cb.checked = true;
-                        cb.parentElement.classList.add('completed');
+                    if (progress[index] !== undefined) {
+                        // Explicitly set both true AND false states
+                        cb.checked = progress[index];
+                        if (progress[index]) {
+                            cb.parentElement.classList.add('completed');
+                        } else {
+                            cb.parentElement.classList.remove('completed');
+                        }
                     }
                 });
-                // Update stats
-                const checkedBoxes = document.querySelectorAll('input[type="checkbox"]:checked');
-                const totalProgress = Math.round((checkedBoxes.length / checkboxes.length) * 100);
-                document.getElementById('totalProgress').textContent = totalProgress + '%';
-                document.getElementById('completedTasks').textContent = checkedBoxes.length + '/' + checkboxes.length;
             }
+
+            // Update stats based on actual checkbox state
+            const checkedBoxes = document.querySelectorAll('input[type="checkbox"]:checked');
+            const totalProgress = Math.round((checkedBoxes.length / checkboxes.length) * 100);
+            document.getElementById('totalProgress').textContent = totalProgress + '%';
+            document.getElementById('completedTasks').textContent = checkedBoxes.length + '/' + checkboxes.length;
         }
 
         // Load progress on page load
