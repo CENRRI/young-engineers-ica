@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documentos - Young Engineers Ica</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0072bc 0%, #005a94 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 50px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #0072bc;
+        }
+
+        .header img {
+            width: 250px;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            color: #0072bc;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .docs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .doc-card {
+            background: linear-gradient(135deg, #0072bc 0%, #f58220 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 12px;
+            text-decoration: none;
+            transition: transform 0.3s, box-shadow 0.3s;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .doc-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .doc-card .icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .doc-card h3 {
+            font-size: 1.4em;
+            margin-bottom: 10px;
+        }
+
+        .doc-card p {
+            font-size: 1em;
+            opacity: 0.9;
+        }
+
+        .back-button {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #0072bc, #f58220);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1.1em;
+            transition: transform 0.3s;
+        }
+
+        .back-button:hover {
+            transform: scale(1.05);
+        }
+
+        .note {
+            background: #fff8f0;
+            border-left: 5px solid #f58220;
+            padding: 20px;
+            margin: 30px 0;
+            border-radius: 5px;
+        }
+
+        .note h3 {
+            color: #f58220;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .note p {
+            color: #666;
+            font-size: 1.1em;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="img/Young_Engineers__slogan_PNG.png" alt="Young Engineers Logo">
+            <h1>📚 Documentación Young Engineers Ica</h1>
+            <p style="color: #666; font-size: 1.2em;">Acceso rápido a todos los documentos del proyecto</p>
+        </div>
+
+        <div class="note">
+            <h3>💡 Cómo usar</h3>
+            <p>Haz clic en cualquier documento para abrirlo. Los archivos se abrirán en tu editor de texto
+                predeterminado o en el navegador con formato mejorado.</p>
+        </div>
+
+        <div class="docs-grid">
+            <a href="MANUAL_DIRECTOR.md" class="doc-card" target="_blank">
+                <span class="icon">📖</span>
+                <h3>Manual Director</h3>
+                <p>Guía completa de operaciones y gestión de la franquicia</p>
+            </a>
+
+            <a href="ESTRUCTURA_PROPIEDAD.md" class="doc-card" target="_blank">
+                <span class="icon">🤝</span>
+                <h3>Estructura de Propiedad</h3>
+                <p>Roles, responsabilidades y acuerdos entre socios</p>
+            </a>
+
+            <a href="PANEL_CONTROL.md" class="doc-card" target="_blank">
+                <span class="icon">📊</span>
+                <h3>Panel de Control</h3>
+                <p>Dashboard de seguimiento de tareas y progreso</p>
+            </a>
+
+            <a href="anexos/checklist_lanzamiento.md" class="doc-card" target="_blank">
+                <span class="icon">✅</span>
+                <h3>Checklist Lanzamiento</h3>
+                <p>Lista detallada de tareas para el lanzamiento</p>
+            </a>
+
+            <a href="anexos/cronograma.md" class="doc-card" target="_blank">
+                <span class="icon">📅</span>
+                <h3>Cronograma</h3>
+                <p>Calendario de actividades y fechas clave</p>
+            </a>
+
+            <a href="anexos/contactos.md" class="doc-card" target="_blank">
+                <span class="icon">📞</span>
+                <h3>Directorio de Contactos</h3>
+                <p>Contactos de colegios, proveedores y servicios</p>
+            </a>
+
+            <a href="anexos/plantillas/email_innova_schools.md" class="doc-card" target="_blank">
+                <span class="icon">✉️</span>
+                <h3>Email Innova Schools</h3>
+                <p>Plantilla de correo para contacto con Innova</p>
+            </a>
+
+            <a href="anexos/plantillas/carta_formal_delacruz.md" class="doc-card" target="_blank">
+                <span class="icon">📝</span>
+                <h3>Carta Formal De La Cruz</h3>
+                <p>Plantilla de carta formal para Colegio De La Cruz</p>
+            </a>
+        </div>
+
+        <div style="text-align: center;">
+            <a href="dashboard.html" class="back-button">← Volver al Dashboard</a>
+        </div>
+    </div>
+</body>
+
+</html>

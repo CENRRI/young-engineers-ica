@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Young Engineers Ica</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0072bc 0%, #005a94 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .login-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            max-width: 450px;
+            width: 100%;
+        }
+
+        .login-header {
+            background: linear-gradient(135deg, #0072bc, #f58220);
+            padding: 40px 30px;
+            text-align: center;
+            color: white;
+        }
+
+        .login-header img {
+            width: 200px;
+            margin-bottom: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .login-header h1 {
+            font-size: 1.8em;
+            margin-bottom: 10px;
+        }
+
+        .login-header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .login-body {
+            padding: 40px 30px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 1.1em;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1.1em;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #0072bc;
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #0072bc, #f58220);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.2em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 114, 188, 0.4);
+        }
+
+        .error-message {
+            background: #ffe6e6;
+            color: #d32f2f;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            border-left: 4px solid #d32f2f;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .login-footer {
+            text-align: center;
+            padding: 20px;
+            background: #f5f5f5;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .role-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        .role-btn {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1em;
+        }
+
+        .role-btn.active {
+            background: #0072bc;
+            color: white;
+            border-color: #0072bc;
+        }
+
+        .role-btn:hover {
+            border-color: #0072bc;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <img src="img/Young_Engineers__slogan_PNG.png" alt="Young Engineers Logo">
+            <h1>Panel de Control</h1>
+            <p>Young Engineers Ica</p>
+        </div>
+
+        <div class="login-body">
+            <div class="error-message" id="errorMessage">
+                Usuario o contraseña incorrectos
+            </div>
+
+            <div class="role-selector">
+                <button class="role-btn active" onclick="selectRole('socio')" id="btnSocio">
+                    👔 Socio
+                </button>
+                <button class="role-btn" onclick="selectRole('personal')" id="btnPersonal">
+                    👤 Personal
+                </button>
+            </div>
+
+            <form onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label for="username">Usuario</label>
+                    <input type="text" id="username" required autocomplete="username">
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Contraseña</label>
+                    <input type="password" id="password" required autocomplete="current-password">
+                </div>
+
+                <button type="submit" class="btn-login">
+                    🔐 Iniciar Sesión
+                </button>
+            </form>
+        </div>
+
+        <div class="login-footer">
+            Young Engineers Ica © 2026 | Lanzamiento Abril 2026
+        </div>
+    </div>
+
+    <script>
+        let selectedRole = 'socio';
+
+        // Usuarios del sistema - contraseñas protegidas con SHA-256
+        const users = {
+            // Socios (Admin)
+            'cesar.gavilano': {
+                passwordHash: '6051fc84a7a0d74c225fb18a496b09952da5642e60723ecae543298edd7d82d6',
+                role: 'admin',
+                name: 'César Enrique Gavilano Vera',
+                title: 'Director de Operaciones'
+            },
+            'cesar.balbuena': {
+                passwordHash: '6051fc84a7a0d74c225fb18a496b09952da5642e60723ecae543298edd7d82d6',
+                role: 'admin',
+                name: 'César Balbuena Uribe',
+                title: 'Director Académico'
+            },
+            // Personal
+            'instructor': {
+                passwordHash: '7448477c642e607e214fc8f12e1e68389c59f142459fea8c074b324acb553100',
+                role: 'staff',
+                name: 'Instructor',
+                title: 'Personal'
+            }
+        };
+
+        // SHA-256 hash function using Web Crypto API
+        async function sha256(message) {
+            const msgBuffer = new TextEncoder().encode(message);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        function selectRole(role) {
+            selectedRole = role;
+            document.getElementById('btnSocio').classList.toggle('active', role === 'socio');
+            document.getElementById('btnPersonal').classList.toggle('active', role === 'personal');
+
+            // Clear form
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+            document.getElementById('errorMessage').classList.remove('show');
+        }
+
+        async function handleLogin(event) {
+            event.preventDefault();
+
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const errorMsg = document.getElementById('errorMessage');
+
+            // Validate user exists
+            const user = users[username];
+            if (!user) {
+                errorMsg.textContent = 'Usuario o contraseña incorrectos';
+                errorMsg.classList.add('show');
+                return;
+            }
+
+            // Compare SHA-256 hash
+            const inputHash = await sha256(password);
+            if (inputHash !== user.passwordHash) {
+                errorMsg.textContent = 'Usuario o contraseña incorrectos';
+                errorMsg.classList.add('show');
+                return;
+            }
+
+            // Validate role
+            if (selectedRole === 'socio' && user.role !== 'admin') {
+                errorMsg.textContent = 'Este usuario no tiene permisos de socio';
+                errorMsg.classList.add('show');
+                return;
+            }
+
+            if (selectedRole === 'personal' && user.role !== 'staff') {
+                errorMsg.textContent = 'Este usuario no es personal';
+                errorMsg.classList.add('show');
+                return;
+            }
+
+            // Save session
+            const session = {
+                username: username,
+                name: user.name,
+                title: user.title,
+                role: user.role,
+                loginTime: new Date().toISOString()
+            };
+
+            sessionStorage.setItem('yeSession', JSON.stringify(session));
+
+            // Redirect to dashboard
+            window.location.href = 'dashboard.html';
+        }
+
+        // Check if already logged in
+        window.onload = function () {
+            const session = sessionStorage.getItem('yeSession');
+            if (session) {
+                window.location.href = 'dashboard.html';
+            }
+        };
+    </script>
+</body>
+
+</html>

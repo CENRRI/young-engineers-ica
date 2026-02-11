@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visor de Documentos - Young Engineers Ica</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0072bc 0%, #005a94 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 50px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #0072bc;
+        }
+
+        .header h1 {
+            color: #0072bc;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .file-selector {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .file-selector select {
+            padding: 12px 20px;
+            font-size: 1.1em;
+            border: 2px solid #0072bc;
+            border-radius: 8px;
+            background: white;
+            color: #333;
+            cursor: pointer;
+            min-width: 300px;
+        }
+
+        .file-selector select:hover {
+            background: #f0f8ff;
+        }
+
+        #content {
+            line-height: 1.8;
+            color: #333;
+        }
+
+        /* Markdown Styling */
+        #content h1 {
+            color: #0072bc;
+            font-size: 2.5em;
+            margin: 30px 0 20px 0;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #f58220;
+        }
+
+        #content h2 {
+            color: #0072bc;
+            font-size: 2em;
+            margin: 25px 0 15px 0;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        #content h3 {
+            color: #005a94;
+            font-size: 1.6em;
+            margin: 20px 0 12px 0;
+        }
+
+        #content h4 {
+            color: #005a94;
+            font-size: 1.3em;
+            margin: 18px 0 10px 0;
+        }
+
+        #content p {
+            font-size: 1.15em;
+            margin: 12px 0;
+            text-align: justify;
+        }
+
+        #content ul,
+        #content ol {
+            font-size: 1.15em;
+            margin: 15px 0;
+            padding-left: 40px;
+        }
+
+        #content li {
+            margin: 8px 0;
+            line-height: 1.6;
+        }
+
+        #content strong {
+            color: #0072bc;
+            font-weight: 700;
+        }
+
+        #content em {
+            color: #f58220;
+            font-style: italic;
+        }
+
+        #content code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95em;
+            color: #d63384;
+        }
+
+        #content pre {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+            border-left: 4px solid #0072bc;
+        }
+
+        #content pre code {
+            background: none;
+            padding: 0;
+            color: #333;
+        }
+
+        #content blockquote {
+            border-left: 5px solid #f58220;
+            padding-left: 20px;
+            margin: 20px 0;
+            font-style: italic;
+            color: #666;
+            background: #fff8f0;
+            padding: 15px 20px;
+            border-radius: 5px;
+        }
+
+        #content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 1.1em;
+        }
+
+        #content table th {
+            background: #0072bc;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        #content table td {
+            padding: 10px 12px;
+            border: 1px solid #e0e0e0;
+        }
+
+        #content table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        #content table tr:hover {
+            background: #e3f2fd;
+        }
+
+        #content hr {
+            border: none;
+            border-top: 2px solid #e0e0e0;
+            margin: 30px 0;
+        }
+
+        #content a {
+            color: #0072bc;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        #content a:hover {
+            color: #f58220;
+            text-decoration: underline;
+        }
+
+        /* Checkbox styling for task lists */
+        #content input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-right: 8px;
+            cursor: pointer;
+        }
+
+        .back-button {
+            display: inline-block;
+            margin-top: 30px;
+            padding: 12px 25px;
+            background: linear-gradient(135deg, #0072bc, #f58220);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: transform 0.3s;
+        }
+
+        .back-button:hover {
+            transform: scale(1.05);
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+
+            .container {
+                box-shadow: none;
+            }
+
+            .file-selector,
+            .back-button {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📄 Documentos Young Engineers Ica</h1>
+        </div>
+
+        <div class="file-selector">
+            <select id="fileSelect" onchange="loadFile()">
+                <option value="">Selecciona un documento...</option>
+                <option value="MANUAL_DIRECTOR.md">📖 Manual Director</option>
+                <option value="ESTRUCTURA_PROPIEDAD.md">🤝 Estructura de Propiedad</option>
+                <option value="PANEL_CONTROL.md">📊 Panel de Control</option>
+                <option value="anexos/checklist_lanzamiento.md">✅ Checklist Lanzamiento</option>
+                <option value="anexos/cronograma.md">📅 Cronograma</option>
+                <option value="anexos/contactos.md">📞 Contactos</option>
+                <option value="anexos/plantillas/email_innova_schools.md">✉️ Email Innova Schools</option>
+                <option value="anexos/plantillas/carta_formal_delacruz.md">📝 Carta Formal De La Cruz</option>
+            </select>
+        </div>
+
+        <div id="content">
+            <p style="text-align: center; color: #999; font-size: 1.2em;">
+                Selecciona un documento del menú superior para visualizarlo
+            </p>
+        </div>
+
+        <div style="text-align: center;">
+            <a href="dashboard.html" class="back-button">← Volver al Dashboard</a>
+        </div>
+    </div>
+
+    <script>
+        async function loadFile() {
+            const select = document.getElementById('fileSelect');
+            const filename = select.value;
+
+            if (!filename) {
+                document.getElementById('content').innerHTML =
+                    '<p style="text-align: center; color: #999; font-size: 1.2em;">Selecciona un documento del menú superior para visualizarlo</p>';
+                return;
+            }
+
+            try {
+                const response = await fetch(filename);
+                const markdown = await response.text();
+
+                // Convert markdown to HTML
+                const html = marked.parse(markdown);
+                document.getElementById('content').innerHTML = html;
+
+                // Scroll to top
+                window.scrollTo(0, 0);
+            } catch (error) {
+                document.getElementById('content').innerHTML =
+                    '<p style="color: red;">Error al cargar el archivo: ' + error.message + '</p>';
+            }
+        }
+    </script>
+</body>
+
+</html>
