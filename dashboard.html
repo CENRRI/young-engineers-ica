@@ -784,6 +784,7 @@
         <div class="activity-section">
             <h2>📅 Programar Actividades</h2>
             <form id="activityForm" onsubmit="addActivity(event)" class="activity-form">
+                <input type="hidden" id="editActivityId">
                 <div class="form-field">
                     <label for="actTitle">Título *</label>
                     <input type="text" id="actTitle" required placeholder="Ej: Reunión con Innova Schools">
@@ -831,13 +832,25 @@
                 </div>
 
                 <div class="form-field full-width">
-                    <label for="actDescription">Descripción (opcional)</label>
-                    <textarea id="actDescription" rows="2" placeholder="Detalles adicionales..."></textarea>
+                    <label for="actDescription">Descripción / Objetivos</label>
+                    <textarea id="actDescription" rows="2" placeholder="Detalles iniciales..."></textarea>
                 </div>
 
-                <button type="submit" class="btn-add-activity">
-                    ➕ Agregar Actividad
-                </button>
+                <div class="form-field full-width">
+                    <label for="actUpdates">Comentarios / Seguimiento (Actualizaciones)</label>
+                    <textarea id="actUpdates" rows="2"
+                        placeholder="Anota aquí cambios de fecha, avances o comentarios..."></textarea>
+                </div>
+
+                <div style="display: flex; gap: 10px; width: 100%;">
+                    <button type="submit" id="btnSubmitActivity" class="btn-add-activity" style="flex: 2;">
+                        ➕ Agregar Actividad
+                    </button>
+                    <button type="button" id="btnCancelEdit" onclick="cancelEdit()" class="btn-add-activity"
+                        style="flex: 1; background: #6c757d; display: none;">
+                        Cancelar
+                    </button>
+                </div>
             </form>
 
             <h3 style="margin-top: 30px; color: #0072bc;">📋 Próximas Actividades</h3>
@@ -1137,6 +1150,7 @@
         async function addActivity(event) {
             event.preventDefault();
 
+            const editId = document.getElementById('editActivityId').value;
             const activityData = {
                 title: document.getElementById('actTitle').value,
                 date: document.getElementById('actDate').value,
@@ -1145,28 +1159,71 @@
                 type: document.getElementById('actType').value,
                 priority: document.getElementById('actPriority').value,
                 description: document.getElementById('actDescription').value,
-                completed: false,
+                updates: document.getElementById('actUpdates').value,
+                completed: false, // Maintain or reset? Usually keep current if editing
                 createdBy: currentUser.name,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
 
+            if (!editId) {
+                activityData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+            }
+
             try {
-                await db.collection('activities').add(activityData);
+                if (editId) {
+                    await db.collection('activities').doc(editId).update(activityData);
+                    await db.collection('auditLog').add({
+                        action: 'activity_updated',
+                        user: currentUser.name,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                        details: `Actividad editada: ${activityData.title} (ID: ${editId})`
+                    });
+                    alert('✅ Actividad actualizada en la nube');
+                } else {
+                    await db.collection('activities').add(activityData);
+                    await db.collection('auditLog').add({
+                        action: 'activity_added',
+                        user: currentUser.name,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                        details: `Nueva actividad: ${activityData.title}`
+                    });
+                    alert('✅ Actividad programada en la nube correctamente');
+                }
 
-                // Log audit
-                await db.collection('auditLog').add({
-                    action: 'activity_added',
-                    user: currentUser.name,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                    details: `Nueva actividad: ${activityData.title}`
-                });
-
-                document.getElementById('activityForm').reset();
-                alert('✅ Actividad programada en la nube correctamente');
+                cancelEdit(); // Reset form and state
             } catch (error) {
-                console.error("Error adding activity:", error);
+                console.error("Error saving activity:", error);
                 alert('❌ Error al guardar en la nube');
             }
+        }
+
+        function editActivity(id, dataStr) {
+            const data = JSON.parse(decodeURIComponent(dataStr));
+
+            // Populate form
+            document.getElementById('editActivityId').value = id;
+            document.getElementById('actTitle').value = data.title;
+            document.getElementById('actDate').value = data.date;
+            document.getElementById('actTime').value = data.time;
+            document.getElementById('actResponsible').value = data.responsible;
+            document.getElementById('actType').value = data.type;
+            document.getElementById('actPriority').value = data.priority;
+            document.getElementById('actDescription').value = data.description || '';
+            document.getElementById('actUpdates').value = data.updates || '';
+
+            // Update UI
+            document.getElementById('btnSubmitActivity').innerHTML = '💾 Actualizar Actividad';
+            document.getElementById('btnCancelEdit').style.display = 'block';
+
+            // Scroll to form
+            document.querySelector('.activity-section').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function cancelEdit() {
+            document.getElementById('editActivityId').value = '';
+            document.getElementById('activityForm').reset();
+            document.getElementById('btnSubmitActivity').innerHTML = '➕ Agregar Actividad';
+            document.getElementById('btnCancelEdit').style.display = 'none';
         }
 
         async function toggleActivity(id, currentStatus, createdBy) {
@@ -1235,6 +1292,9 @@
                 const buttonCursor = canEdit ? 'pointer' : 'not-allowed';
                 const buttonTitle = canEdit ? '' : 'Solo puedes editar tus propias actividades';
 
+                // Prepare data for edit function
+                const safeData = encodeURIComponent(JSON.stringify(act));
+
                 return `
                     <div style="background: white; border-left: 4px solid ${priorityColors[act.priority]}; padding: 15px; margin-bottom: 10px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
                         <div style="display: flex; justify-content: space-between; align-items: start;">
@@ -1246,19 +1306,27 @@
                                 <p style="color: #666; font-size: 0.9em; margin-bottom: 5px;">
                                     👤 ${act.responsible} | 📋 ${act.type}
                                 </p>
-                                ${act.description ? `<p style="color: #999; font-size: 0.85em; margin-top: 8px;">${act.description}</p>` : ''}
-                                <p style="color: #999; font-size: 0.75em; margin-top: 5px; font-style: italic;">
+                                ${act.description ? `<p style="color: #444; font-size: 0.85em; margin-top: 8px; border-left: 2px solid #eee; padding-left: 10px;">${act.description}</p>` : ''}
+                                ${act.updates ? `<div style="background: #f8f9fa; padding: 10px; margin-top: 10px; border-radius: 5px; font-size: 0.85em;">
+                                    <strong>💬 Seguimiento:</strong><br>${act.updates}
+                                </div>` : ''}
+                                <p style="color: #999; font-size: 0.75em; margin-top: 10px; font-style: italic;">
                                     Creado por: ${act.createdBy}
                                 </p>
                             </div>
                             <div style="display: flex; gap: 8px;">
+                                <button onclick="editActivity('${act.id}', '${safeData}')" 
+                                        title="Editar actividad"
+                                        style="background: #0072bc; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: ${buttonCursor}; opacity: ${buttonOpacity};">
+                                    ✏️
+                                </button>
                                 <button onclick="toggleActivity('${act.id}', ${act.completed}, '${act.createdBy}')" 
-                                        title="${buttonTitle}"
+                                        title="Completar"
                                         style="background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: ${buttonCursor}; opacity: ${buttonOpacity};">
                                     ✅
                                 </button>
                                 <button onclick="deleteActivity('${act.id}', '${act.createdBy}')" 
-                                        title="${buttonTitle}"
+                                        title="Eliminar"
                                         style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: ${buttonCursor}; opacity: ${buttonOpacity};">
                                     🗑️
                                 </button>

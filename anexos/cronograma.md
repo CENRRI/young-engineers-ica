@@ -12,7 +12,7 @@
 
 | Día | Actividad | Responsable | Estado |
 |-----|-----------|-------------|--------|
-| Lun 10 | Cambio a MYPE Tributario | César E. | ✅ |
+| Lun 10 | Cambio a MYPE Tributario | César E. | ⏳ |
 | Mar 11 | Crear establecimiento anexo Ica | César E. | ⏳ |
 | Mié 12 | Activar facturación electrónica | César E. | ⏳ |
 | Jue 13 | Solicitar TUPA 39 DIGESA | César E. | ⏳ |
