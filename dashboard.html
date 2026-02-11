@@ -435,7 +435,67 @@
                 font-size: 1.8em;
             }
         }
+
+        /* Firebase Sync Indicator */
+        .sync-status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: 30px;
+            background: white;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 1000;
+            font-size: 0.9em;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .sync-status.saved {
+            border-left: 4px solid #28a745;
+            color: #28a745;
+        }
+
+        .sync-status.saving {
+            border-left: 4px solid #ffc107;
+            color: #856404;
+        }
+
+        .sync-status.error {
+            border-left: 4px solid #dc3545;
+            color: #dc3545;
+        }
+
+        .sync-status.pending {
+            border-left: 4px solid #17a2b8;
+            color: #0c5460;
+        }
+
+        .btn-save-cloud {
+            background: #f58220;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+
+        .btn-save-cloud:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(245, 130, 32, 0.4);
+        }
     </style>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 </head>
 
 <body>
@@ -832,7 +892,34 @@
         </div>
     </div>
 
+    <!-- Sync Indicator -->
+    <div id="syncStatus" class="sync-status saved">
+        <span id="syncIcon">✅</span>
+        <span id="syncText">Sincronizado con la nube</span>
+        <button class="btn-save-cloud" onclick="manualSave()"
+            style="margin-left: 10px; padding: 5px 10px; font-size: 0.8em;">
+            💾 Guardar ahora
+        </button>
+    </div>
+
     <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAtu5DTu5CG1Ez4Wvk8XPLNvpDDIut6grw",
+            authDomain: "young-engineers-ica.firebaseapp.com",
+            projectId: "young-engineers-ica",
+            storageBucket: "young-engineers-ica.firebasestorage.app",
+            messagingSenderId: "148938321675",
+            appId: "1:148938321675:web:1d28f9807db4e13c413c0e"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // State management
+        let isDirty = false;
+        let lastSaveTime = Date.now();
         // Update last update time
         document.getElementById('lastUpdate').textContent = new Date().toLocaleString('es-PE');
 
@@ -854,54 +941,123 @@
             // Recalculate total progress
             const allCheckboxes = document.querySelectorAll('input[type="checkbox"]');
             const checkedBoxes = document.querySelectorAll('input[type="checkbox"]:checked');
-            const progress = Math.round((checkedBoxes.length / allCheckboxes.length) * 100);
+            const progressCount = checkedBoxes.length;
+            const totalCount = allCheckboxes.length;
+            const progressPercent = Math.round((progressCount / totalCount) * 100);
 
-            document.getElementById('totalProgress').textContent = progress + '%';
-            document.getElementById('completedTasks').textContent = checkedBoxes.length + '/' + allCheckboxes.length;
+            document.getElementById('totalProgress').textContent = progressPercent + '%';
+            document.getElementById('completedTasks').textContent = progressCount + '/' + totalCount;
 
-            // Save to localStorage
-            saveProgress();
+            // Mark as dirty and update UI
+            isDirty = true;
+            updateSyncUI('pending', 'Cambios sin guardar ⚠️');
+
+            // Auto-save logic (debounce)
+            clearTimeout(window.autoSaveTimeout);
+            window.autoSaveTimeout = setTimeout(() => {
+                if (isDirty) saveProgressToCloud();
+            }, 5000); // 5 seconds after last change
         }
 
-        // Save progress to localStorage
-        function saveProgress() {
+        function updateSyncUI(status, text) {
+            const el = document.getElementById('syncStatus');
+            const icon = document.getElementById('syncIcon');
+            const txt = document.getElementById('syncText');
+
+            if (!el || !icon || !txt) return;
+
+            el.className = 'sync-status ' + status;
+            txt.textContent = text;
+
+            if (status === 'saved') icon.textContent = '✅';
+            if (status === 'saving') icon.textContent = '⏳';
+            if (status === 'pending') icon.textContent = '⚠️';
+            if (status === 'error') icon.textContent = '❌';
+        }
+
+        async function manualSave() {
+            await saveProgressToCloud();
+            // Activities are saved individually when added/removed, but we ensure sync here
+            isDirty = false;
+        }
+
+        // Save progress to Firestore
+        async function saveProgressToCloud() {
+            if (!currentUser) return;
+
+            updateSyncUI('saving', 'Guardando en la nube...');
+
             const checkboxes = document.querySelectorAll('input[type="checkbox"]');
             const progress = {};
             checkboxes.forEach((cb, index) => {
                 progress[index] = cb.checked;
             });
-            localStorage.setItem('youngEngineersProgress', JSON.stringify(progress));
+
+            try {
+                await db.collection('taskProgress').doc('global').set({
+                    checkboxStates: progress,
+                    lastModifiedBy: currentUser.name,
+                    lastModifiedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                // Also log audit
+                await db.collection('auditLog').add({
+                    action: 'progress_update',
+                    user: currentUser.name,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    details: 'Actualización general de progreso'
+                });
+
+                isDirty = false;
+                updateSyncUI('saved', 'Sincronizado con la nube ✅');
+            } catch (error) {
+                console.error("Error saving to Firestore:", error);
+                updateSyncUI('error', 'Error al guardar ❌');
+            }
         }
 
-        // Load progress from localStorage
-        function loadProgress() {
-            const saved = localStorage.getItem('youngEngineersProgress');
-            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+        // Load progress from Firestore (Real-time)
+        function listenToCloudProgress() {
+            db.collection('taskProgress').doc('global').onSnapshot((doc) => {
+                if (doc.exists && !isDirty) {
+                    const data = doc.data();
+                    const state = data.checkboxStates;
+                    const checkboxes = document.querySelectorAll('input[type="checkbox"]');
 
-            if (saved) {
-                const progress = JSON.parse(saved);
-                checkboxes.forEach((cb, index) => {
-                    if (progress[index] !== undefined) {
-                        // Explicitly set both true AND false states
-                        cb.checked = progress[index];
-                        if (progress[index]) {
-                            cb.parentElement.classList.add('completed');
-                        } else {
-                            cb.parentElement.classList.remove('completed');
+                    checkboxes.forEach((cb, index) => {
+                        if (state[index] !== undefined) {
+                            cb.checked = state[index];
+                            if (state[index]) {
+                                cb.parentElement.classList.add('completed');
+                            } else {
+                                cb.parentElement.classList.remove('completed');
+                            }
                         }
-                    }
-                });
-            }
+                    });
 
-            // Update stats based on actual checkbox state
-            const checkedBoxes = document.querySelectorAll('input[type="checkbox"]:checked');
-            const totalProgress = Math.round((checkedBoxes.length / checkboxes.length) * 100);
-            document.getElementById('totalProgress').textContent = totalProgress + '%';
-            document.getElementById('completedTasks').textContent = checkedBoxes.length + '/' + checkboxes.length;
+                    // Update stats
+                    const checkedBoxes = document.querySelectorAll('input[type="checkbox"]:checked');
+                    if (checkboxes.length > 0) {
+                        const totalProgressPercent = Math.round((checkedBoxes.length / checkboxes.length) * 100);
+                        document.getElementById('totalProgress').textContent = totalProgressPercent + '%';
+                        document.getElementById('completedTasks').textContent = checkedBoxes.length + '/' + checkboxes.length;
+                    }
+
+                    if (data.lastModifiedBy) {
+                        document.getElementById('lastUpdate').textContent = `Sync: ${data.lastModifiedBy}`;
+                    }
+                }
+            }, (error) => {
+                console.error("Error listening to progress:", error);
+                updateSyncUI('error', 'Error de conexión ❌');
+            });
         }
 
         // Load progress on page load
-        window.addEventListener('load', loadProgress);
+        window.addEventListener('load', () => {
+            listenToCloudProgress();
+            renderActivities(); // We'll update this next
+        });
 
         // ===== AUTHENTICATION SYSTEM =====
         function checkAuth() {
@@ -965,18 +1121,23 @@
             header.appendChild(badge);
         }
 
-        // ===== ACTIVITY SCHEDULING SYSTEM =====
-        let activities = JSON.parse(localStorage.getItem('yeActivities')) || [];
-
-        function saveActivities() {
-            localStorage.setItem('yeActivities', JSON.stringify(activities));
+        // ===== ACTIVITY SCHEDULING SYSTEM (Firestore) =====
+        function listenToActivities() {
+            db.collection('activities').orderBy('date').orderBy('time').onSnapshot((snapshot) => {
+                const activities = [];
+                snapshot.forEach((doc) => {
+                    activities.push({ id: doc.id, ...doc.data() });
+                });
+                renderActivities(activities);
+            }, (error) => {
+                console.error("Error listening to activities:", error);
+            });
         }
 
-        function addActivity(event) {
+        async function addActivity(event) {
             event.preventDefault();
 
-            const activity = {
-                id: Date.now(),
+            const activityData = {
                 title: document.getElementById('actTitle').value,
                 date: document.getElementById('actDate').value,
                 time: document.getElementById('actTime').value,
@@ -985,64 +1146,83 @@
                 priority: document.getElementById('actPriority').value,
                 description: document.getElementById('actDescription').value,
                 completed: false,
-                createdBy: currentUser.name
+                createdBy: currentUser.name,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
             };
 
-            activities.push(activity);
-            activities.sort((a, b) => new Date(a.date + ' ' + a.time) - new Date(b.date + ' ' + b.time));
-            saveActivities();
-            renderActivities();
+            try {
+                await db.collection('activities').add(activityData);
 
-            // Reset form
-            document.getElementById('activityForm').reset();
-            alert('✅ Actividad programada correctamente');
-        }
+                // Log audit
+                await db.collection('auditLog').add({
+                    action: 'activity_added',
+                    user: currentUser.name,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    details: `Nueva actividad: ${activityData.title}`
+                });
 
-        function toggleActivity(id) {
-            const activity = activities.find(a => a.id === id);
-            if (activity) {
-                // Check permissions for staff
-                if (currentUser.role === 'staff' && activity.createdBy !== currentUser.name) {
-                    alert('❌ No tienes permiso para modificar actividades de otros usuarios');
-                    return;
-                }
-
-                activity.completed = !activity.completed;
-                saveActivities();
-                renderActivities();
+                document.getElementById('activityForm').reset();
+                alert('✅ Actividad programada en la nube correctamente');
+            } catch (error) {
+                console.error("Error adding activity:", error);
+                alert('❌ Error al guardar en la nube');
             }
         }
 
-        function deleteActivity(id) {
-            const activity = activities.find(a => a.id === id);
-
+        async function toggleActivity(id, currentStatus, createdBy) {
             // Check permissions for staff
-            if (currentUser.role === 'staff' && activity.createdBy !== currentUser.name) {
+            if (currentUser.role === 'staff' && createdBy !== currentUser.name) {
+                alert('❌ No tienes permiso para modificar actividades de otros usuarios');
+                return;
+            }
+
+            try {
+                await db.collection('activities').doc(id).update({
+                    completed: !currentStatus,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            } catch (error) {
+                console.error("Error toggling activity:", error);
+            }
+        }
+
+        async function deleteActivity(id, createdBy) {
+            // Check permissions for staff
+            if (currentUser.role === 'staff' && createdBy !== currentUser.name) {
                 alert('❌ No tienes permiso para eliminar actividades de otros usuarios');
                 return;
             }
 
-            if (confirm('¿Eliminar esta actividad?')) {
-                activities = activities.filter(a => a.id !== id);
-                saveActivities();
-                renderActivities();
+            if (confirm('¿Eliminar esta actividad de la nube?')) {
+                try {
+                    await db.collection('activities').doc(id).delete();
+
+                    // Log audit
+                    await db.collection('auditLog').add({
+                        action: 'activity_deleted',
+                        user: currentUser.name,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                        details: `Actividad eliminada: ${id}`
+                    });
+                } catch (error) {
+                    console.error("Error deleting activity:", error);
+                }
             }
         }
 
-        function renderActivities() {
+        function renderActivities(activities) {
             const container = document.getElementById('activitiesList');
             if (!container) return;
 
-            const now = new Date();
-            const upcoming = activities.filter(a => !a.completed && new Date(a.date + ' ' + a.time) >= now);
+            // Sort by date and time
+            const upcoming = activities.filter(a => !a.completed).sort((a, b) => new Date(a.date + ' ' + a.time) - new Date(b.date + ' ' + b.time));
 
             if (upcoming.length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">No hay actividades programadas</p>';
+                container.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">No hay actividades programadas en la nube</p>';
                 return;
             }
 
             container.innerHTML = upcoming.slice(0, 10).map(act => {
-                const actDate = new Date(act.date + ' ' + act.time);
                 const priorityColors = {
                     'alta': '#d32f2f',
                     'media': '#f58220',
@@ -1071,13 +1251,17 @@
                                     Creado por: ${act.createdBy}
                                 </p>
                             </div>
-                            <div style="display: flex; gap: 5px;">
-                                <button onclick="toggleActivity(${act.id})" 
-                                    style="padding: 5px 10px; background: #4caf50; color: white; border: none; border-radius: 5px; cursor: ${buttonCursor}; opacity: ${buttonOpacity};" 
-                                    title="${buttonTitle}">✓</button>
-                                <button onclick="deleteActivity(${act.id})" 
-                                    style="padding: 5px 10px; background: #d32f2f; color: white; border: none; border-radius: 5px; cursor: ${buttonCursor}; opacity: ${buttonOpacity};" 
-                                    title="${buttonTitle}">✕</button>
+                            <div style="display: flex; gap: 8px;">
+                                <button onclick="toggleActivity('${act.id}', ${act.completed}, '${act.createdBy}')" 
+                                        title="${buttonTitle}"
+                                        style="background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: ${buttonCursor}; opacity: ${buttonOpacity};">
+                                    ✅
+                                </button>
+                                <button onclick="deleteActivity('${act.id}', '${act.createdBy}')" 
+                                        title="${buttonTitle}"
+                                        style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: ${buttonCursor}; opacity: ${buttonOpacity};">
+                                    🗑️
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -1085,11 +1269,13 @@
             }).join('');
         }
 
-        // Render activities on load
-        if (currentUser) {
-            setTimeout(renderActivities, 100);
-        }
-
+        // Initialize Cloud Listeners on page load
+        window.addEventListener('load', () => {
+            if (currentUser) {
+                listenToCloudProgress();
+                listenToActivities();
+            }
+        });
     </script>
 </body>
 
